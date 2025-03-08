@@ -1,0 +1,13 @@
+{
+    "git.autofetch": true,
+    "redhat.telemetry.enabled": true,
+    "security.workspace.trust.untrustedFiles": "open",
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "/home/jack/Downloads/openjfx-23.0.2_linux-x64_bin-sdk/javafx-sdk-23.0.2/lib/*.jar"
+    ],
+    "java.project.excludedFiles": [
+         "**/m2/repository/org/openjfx/**"
+    ],
+    "java.showBuildStatusOnStart.enabled": "notification"
+}
