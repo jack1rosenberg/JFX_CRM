@@ -81,11 +81,12 @@ public class CustomerManager {
 
     public List<Customer> searchCustomers(String query) {
         query = query.toLowerCase();
+        String finalQuery = query;
         return customers.values().stream()
-                .filter(c -> c.getFirstName().toLowerCase().contains(query) ||
-                        c.getLastName().toLowerCase().contains(query) ||
-                        c.getEmail().toLowerCase().contains(query) ||
-                        c.getPhone().toLowerCase().contains(query))
+                .filter(c -> c.getFirstName().toLowerCase().contains(finalQuery) ||
+                        c.getLastName().toLowerCase().contains(finalQuery) ||
+                        c.getEmail().toLowerCase().contains(finalQuery) ||
+                        c.getPhone().toLowerCase().contains(finalQuery))
                 .collect(Collectors.toList());
     }
 
