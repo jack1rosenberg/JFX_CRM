@@ -7,7 +7,9 @@
         "/home/jack/Downloads/openjfx-23.0.2_linux-x64_bin-sdk/javafx-sdk-23.0.2/lib/*.jar"
     ],
     "java.project.excludedFiles": [
-         "**/m2/repository/org/openjfx/**"
+         "**/m2/repository/org/openjfx/**",
+         "**/m2/repository/org/apache/maven/**",
     ],
-    "java.showBuildStatusOnStart.enabled": "notification"
+    "java.showBuildStatusOnStart.enabled": "notification",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
