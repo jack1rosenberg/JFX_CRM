@@ -509,7 +509,7 @@ public class InvoiceViewController {
     }
 
     // Helper classes for the invoice management
-    private static class InvoiceDisplayItem {
+    public static class InvoiceDisplayItem {
         private final String invoiceId;
         private final String customerName;
         private final String creationDate;
