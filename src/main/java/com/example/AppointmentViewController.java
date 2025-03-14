@@ -315,6 +315,7 @@ public class AppointmentViewController {
             }
         });
 
+
         // Date picker
         DatePicker datePicker = new DatePicker();
         datePicker.setValue(LocalDate.now());
@@ -460,6 +461,7 @@ public class AppointmentViewController {
             }
             return null;
         });
+
 
         // Show the dialog and process the result
         Optional<CustomerManager.Appointment> result = dialog.showAndWait();
