@@ -10,7 +10,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Backend for Auto Detailing CRM application
+ * Backend for my Auto Detailing CRM application, and IB CS2 IA
  * Manages customers, appointments, services, and invoices
  */
 public class CustomerManager {

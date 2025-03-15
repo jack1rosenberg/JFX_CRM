@@ -85,7 +85,7 @@ public class CustomerViewController {
         });
 
         TableColumn<CustomerManager.Customer, Void> actionsCol = new TableColumn<>("Actions");
-        actionsCol.setPrefWidth(200);
+        actionsCol.setPrefWidth(300);
         actionsCol.setCellFactory(createActionCellFactory());
 
         customerTable.getColumns().addAll(nameCol, emailCol, phoneCol, vehicleCol, actionsCol);
