@@ -1,7 +1,9 @@
 package com.example;
 
+import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,10 +16,18 @@ import java.util.stream.Collectors;
  * Manages customers, appointments, services, and invoices
  */
 public class CustomerManager {
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private Map<String, Customer> customers;
     private Map<String, Appointment> appointments;
     private Map<String, Service> services;
     private Map<String, Invoice> invoices;
+
+    private static final String DATA_DIRECTORY = "data";
+    private static final String CUSTOMERS_FILE = DATA_DIRECTORY + "/customers.txt";
+    private static final String APPOINTMENTS_FILE = DATA_DIRECTORY + "/appointments.txt";
+    private static final String SERVICES_FILE = DATA_DIRECTORY + "/services.txt";
+    private static final String INVOICES_FILE = DATA_DIRECTORY + "/invoices.txt";
+
 
     public CustomerManager() {
         customers = new HashMap<>();
@@ -25,8 +35,17 @@ public class CustomerManager {
         services = new HashMap<>();
         invoices = new HashMap<>();
 
-        // Initialize with default services
-        initializeDefaultServices();
+        // Create data directory if it doesn't exist
+        File directory = new File(DATA_DIRECTORY);
+        if (!directory.exists()) {
+            directory.mkdir();
+        }
+
+        // Load existing data or initialize with defaults
+        if (!loadData()) {
+            // Initialize with default services if loading failed
+            initializeDefaultServices();
+        }
     }
 
     private void initializeDefaultServices() {
@@ -43,12 +62,14 @@ public class CustomerManager {
             customer.setId(UUID.randomUUID().toString());
         }
         customers.put(customer.getId(), customer);
+        saveData(); // Save after modification
         return customer.getId();
     }
 
     public boolean updateCustomer(Customer customer) {
         if (customers.containsKey(customer.getId())) {
             customers.put(customer.getId(), customer);
+            saveData(); // Save after modification
             return true;
         }
         return false;
@@ -66,6 +87,7 @@ public class CustomerManager {
 
             appointmentsToRemove.forEach(appointments::remove);
 
+            saveData();
             return true;
         }
         return false;
@@ -96,12 +118,14 @@ public class CustomerManager {
             appointment.setId(UUID.randomUUID().toString());
         }
         appointments.put(appointment.getId(), appointment);
+        saveData();
         return appointment.getId();
     }
 
     public boolean updateAppointment(Appointment appointment) {
         if (appointments.containsKey(appointment.getId())) {
             appointments.put(appointment.getId(), appointment);
+            saveData();
             return true;
         }
         return false;
@@ -110,6 +134,7 @@ public class CustomerManager {
     public boolean deleteAppointment(String appointmentId) {
         if (appointments.containsKey(appointmentId)) {
             appointments.remove(appointmentId);
+            saveData();
             return true;
         }
         return false;
@@ -141,12 +166,14 @@ public class CustomerManager {
             service.setId(UUID.randomUUID().toString());
         }
         services.put(service.getId(), service);
+        saveData();
         return service.getId();
     }
 
     public boolean updateService(Service service) {
         if (services.containsKey(service.getId())) {
             services.put(service.getId(), service);
+            saveData();
             return true;
         }
         return false;
@@ -155,6 +182,7 @@ public class CustomerManager {
     public boolean deleteService(String serviceId) {
         if (services.containsKey(serviceId)) {
             services.remove(serviceId);
+            saveData();
             return true;
         }
         return false;
@@ -189,6 +217,7 @@ public class CustomerManager {
         invoice.setTotalAmount(total);
         invoices.put(invoice.getId(), invoice);
 
+        saveData();
         return invoice.getId();
     }
 
@@ -199,6 +228,7 @@ public class CustomerManager {
             if (status.equals("PAID")) {
                 invoice.setPaymentDate(LocalDateTime.now());
             }
+            saveData();
             return true;
         }
         return false;
@@ -223,6 +253,312 @@ public class CustomerManager {
                 .filter(i -> i.getStatus().equals("PENDING"))
                 .collect(Collectors.toList());
     }
+
+
+    public boolean saveData() {
+        try {
+            saveCustomers();
+            saveAppointments();
+            saveServices();
+            saveInvoices();
+            return true;
+        } catch (IOException e) {
+            System.err.println("Error saving data: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean loadData() {
+        try {
+            boolean customersLoaded = loadCustomers();
+            boolean appointmentsLoaded = loadAppointments();
+            boolean servicesLoaded = loadServices();
+            boolean invoicesLoaded = loadInvoices();
+
+            // Return true if at least services were loaded successfully
+            return servicesLoaded;
+        } catch (IOException e) {
+            System.err.println("Error loading data: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    private void saveCustomers() throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(CUSTOMERS_FILE))) {
+            for (Customer customer : customers.values()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(customer.getId()).append("|");
+                sb.append(customer.getFirstName()).append("|");
+                sb.append(customer.getLastName()).append("|");
+                sb.append(customer.getEmail()).append("|");
+                sb.append(customer.getPhone()).append("|");
+                sb.append(escapeField(customer.getAddress())).append("|");
+                sb.append(customer.getVehicleMake()).append("|");
+                sb.append(customer.getVehicleModel()).append("|");
+                sb.append(customer.getVehicleYear()).append("|");
+                sb.append(customer.getVehicleColor()).append("|");
+                sb.append(escapeField(customer.getNotes())).append("|");
+                sb.append(customer.getCreatedAt().format(DATE_FORMATTER));
+
+                writer.println(sb.toString());
+            }
+        }
+    }
+
+    private boolean loadCustomers() throws IOException {
+        File file = new File(CUSTOMERS_FILE);
+        if (!file.exists()) return false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            customers.clear();
+
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length >= 12) {
+                    Customer customer = new Customer();
+                    customer.setId(parts[0]);
+                    customer.setFirstName(parts[1]);
+                    customer.setLastName(parts[2]);
+                    customer.setEmail(parts[3]);
+                    customer.setPhone(parts[4]);
+                    customer.setAddress(unescapeField(parts[5]));
+                    customer.setVehicleMake(parts[6]);
+                    customer.setVehicleModel(parts[7]);
+                    customer.setVehicleYear(parts[8]);
+                    customer.setVehicleColor(parts[9]);
+                    customer.setNotes(unescapeField(parts[10]));
+                    customer.setCreatedAt(LocalDateTime.parse(parts[11], DATE_FORMATTER));
+
+                    customers.put(customer.getId(), customer);
+                }
+            }
+            return true;
+        }
+    }
+
+    // Appointment persistence
+    private void saveAppointments() throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(APPOINTMENTS_FILE))) {
+            for (Appointment appointment : appointments.values()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(appointment.getId()).append("|");
+                sb.append(appointment.getCustomerId()).append("|");
+                sb.append(appointment.getDateTime().format(DATE_FORMATTER)).append("|");
+                sb.append(escapeField(appointment.getLocation())).append("|");
+
+                // Save service IDs as comma-separated values
+                sb.append(appointment.getServiceIds().stream()
+                        .collect(Collectors.joining(","))).append("|");
+
+                sb.append(appointment.getStatus()).append("|");
+                sb.append(escapeField(appointment.getNotes()));
+
+                writer.println(sb.toString());
+            }
+        }
+    }
+
+    private boolean loadAppointments() throws IOException {
+        File file = new File(APPOINTMENTS_FILE);
+        if (!file.exists()) return false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            appointments.clear();
+
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length >= 6) {
+                    Appointment appointment = new Appointment();
+                    appointment.setId(parts[0]);
+                    appointment.setCustomerId(parts[1]);
+                    appointment.setDateTime(LocalDateTime.parse(parts[2], DATE_FORMATTER));
+                    appointment.setLocation(unescapeField(parts[3]));
+
+                    // Parse service IDs
+                    List<String> serviceIds = new ArrayList<>();
+                    if (parts[4] != null && !parts[4].isEmpty()) {
+                        String[] serviceIdArray = parts[4].split(",");
+                        for (String serviceId : serviceIdArray) {
+                            serviceIds.add(serviceId);
+                        }
+                    }
+                    appointment.setServiceIds(serviceIds);
+
+                    appointment.setStatus(parts[5]);
+
+                    if (parts.length > 6) {
+                        appointment.setNotes(unescapeField(parts[6]));
+                    }
+
+                    appointments.put(appointment.getId(), appointment);
+                }
+            }
+            return true;
+        }
+    }
+
+    // Service persistence
+    private void saveServices() throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(SERVICES_FILE))) {
+            for (Service service : services.values()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(service.getId()).append("|");
+                sb.append(service.getCode()).append("|");
+                sb.append(service.getName()).append("|");
+                sb.append(escapeField(service.getDescription())).append("|");
+                sb.append(service.getPrice());
+
+                writer.println(sb.toString());
+            }
+        }
+    }
+
+    private boolean loadServices() throws IOException {
+        File file = new File(SERVICES_FILE);
+        if (!file.exists()) return false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            services.clear();
+
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length >= 5) {
+                    Service service = new Service();
+                    service.setId(parts[0]);
+                    service.setCode(parts[1]);
+                    service.setName(parts[2]);
+                    service.setDescription(unescapeField(parts[3]));
+                    service.setPrice(Double.parseDouble(parts[4]));
+
+                    services.put(service.getId(), service);
+                }
+            }
+            return true;
+        }
+    }
+
+    // Invoice persistence
+    private void saveInvoices() throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(INVOICES_FILE))) {
+            for (Invoice invoice : invoices.values()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(invoice.getId()).append("|");
+                sb.append(invoice.getCustomerId()).append("|");
+                sb.append(invoice.getAppointmentId()).append("|");
+
+                // Save service IDs as comma-separated values
+                sb.append(invoice.getServiceIds().stream()
+                        .collect(Collectors.joining(","))).append("|");
+
+                sb.append(invoice.getTotalAmount()).append("|");
+                sb.append(invoice.getStatus()).append("|");
+                sb.append(invoice.getCreationDate().format(DATE_FORMATTER)).append("|");
+
+                // Payment date might be null
+                sb.append(invoice.getPaymentDate() != null ?
+                        invoice.getPaymentDate().format(DATE_FORMATTER) : "");
+
+                writer.println(sb.toString());
+            }
+        }
+    }
+
+    private boolean loadInvoices() throws IOException {
+        File file = new File(INVOICES_FILE);
+        if (!file.exists()) return false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            invoices.clear();
+
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length >= 7) {
+                    Invoice invoice = new Invoice();
+                    invoice.setId(parts[0]);
+                    invoice.setCustomerId(parts[1]);
+                    invoice.setAppointmentId(parts[2]);
+
+                    // Parse service IDs
+                    List<String> serviceIds = new ArrayList<>();
+                    if (parts[3] != null && !parts[3].isEmpty()) {
+                        String[] serviceIdArray = parts[3].split(",");
+                        for (String serviceId : serviceIdArray) {
+                            serviceIds.add(serviceId);
+                        }
+                    }
+                    invoice.setServiceIds(serviceIds);
+
+                    invoice.setTotalAmount(Double.parseDouble(parts[4]));
+                    invoice.setStatus(parts[5]);
+                    invoice.setCreationDate(LocalDateTime.parse(parts[6], DATE_FORMATTER));
+
+                    // Handle payment date if present
+                    if (parts.length > 7 && !parts[7].isEmpty()) {
+                        invoice.setPaymentDate(LocalDateTime.parse(parts[7], DATE_FORMATTER));
+                    }
+
+                    invoices.put(invoice.getId(), invoice);
+                }
+            }
+            return true;
+        }
+    }
+
+
+    /**
+     * Helper method to escape pipe characters in fields
+     * so they don't interfere with parsing
+     */
+    private String escapeField(String field) {
+        if (field == null) return "";
+        return field.replace("|", "\\|").replace("\n", "\\n");
+    }
+
+    /**
+     * Helper method to unescape pipe characters in fields
+     */
+    private String unescapeField(String field) {
+        if (field == null) return "";
+        return field.replace("\\|", "|").replace("\\n", "\n");
+    }
+
+
+
+    public boolean backupData(String backupSuffix) {
+        try {
+            copyFile(CUSTOMERS_FILE, CUSTOMERS_FILE + "." + backupSuffix);
+            copyFile(APPOINTMENTS_FILE, APPOINTMENTS_FILE + "." + backupSuffix);
+            copyFile(SERVICES_FILE, SERVICES_FILE + "." + backupSuffix);
+            copyFile(INVOICES_FILE, INVOICES_FILE + "." + backupSuffix);
+            return true;
+        } catch (IOException e) {
+            System.err.println("Error creating backup: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void copyFile(String source, String destination) throws IOException {
+        File sourceFile = new File(source);
+        if (!sourceFile.exists()) return;
+
+        try (
+                FileInputStream in = new FileInputStream(sourceFile);
+                FileOutputStream out = new FileOutputStream(new File(destination))
+        ) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = in.read(buffer)) > 0) {
+                out.write(buffer, 0, length);
+            }
+        }
+    }
+
+
 
     // Data classes
     public static class Customer {

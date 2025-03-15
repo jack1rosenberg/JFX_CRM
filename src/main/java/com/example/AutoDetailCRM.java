@@ -24,7 +24,7 @@ public class AutoDetailCRM extends Application {
         customerManager = new CustomerManager();
 
         // Add sample data for testing
-        customerManager.addSampleData();
+        //customerManager.addSampleData();
 
         // Initialize controllers
         customerViewController = new CustomerViewController(customerManager);
